@@ -1,0 +1,40 @@
+{
+  "name": "spotme",
+  "short_name": "Spotme",
+  "description": "IP to Geo Location",
+  "start_url": "https://spotme.jessejesse.com",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "favicon192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ],
+  "ms": {
+    "tileColor": "#FFFFFF",
+    "tileImage": "favicon.png"
+  }
+}
