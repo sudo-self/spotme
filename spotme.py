@@ -1,10 +1,11 @@
 import sys
 import requests
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QLineEdit, QHBoxLayout, QListWidget
+    QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit, QListWidget
 )
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QPixmap, QImage, QPainter
+from PyQt6.QtSvg import QSvgRenderer
+from PyQt6.QtCore import QTimer, Qt, QByteArray
 import webbrowser
 
 class SpotMeWorkerApp(QMainWindow):
@@ -14,7 +15,6 @@ class SpotMeWorkerApp(QMainWindow):
         self.setWindowTitle("python spotme.py")
         self.setGeometry(100, 100, 800, 600)
 
-        # Styling for the application
         self.setStyleSheet("""
             QWidget {
                 background-color: #2E2E2E;
@@ -62,38 +62,42 @@ class SpotMeWorkerApp(QMainWindow):
             }
         """)
 
-        # Main container setup
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
-        # Date and Time Display
         self.date_time_label = QLabel(self)
         self.layout.addWidget(self.date_time_label)
         self.update_date_time()
 
-        # Title
-        self.title_label = QLabel("<h1>python spotme.py</h1>", self)
+        self.title_label = QLabel("<h1>spotme.py</h1>", self)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.title_label)
 
-        # Worker Image
-        self.worker_image = QLabel(self)
-        self.worker_image.setPixmap(QPixmap("worker.svg").scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio))
-        self.worker_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.worker_image)
+        self.icons_layout = QHBoxLayout()
+        icon_urls = [
+            "https://api.iconify.design/logos:python.svg?color=%23ff2600",
+            "https://api.iconify.design/devicon:redis-wordmark.svg?color=%23ff2600",
+            "https://api.iconify.design/logos:upstash-icon.svg?color=%23ff2600",
+            "https://api.iconify.design/logos:cloudflare-workers-icon.svg?color=%23ff2600",
+            "https://api.iconify.design/logos:google-cloud.svg?color=%23ff2600",
+            "https://api.iconify.design/arcticons:openai-chatgpt.svg?color=%23ff2600"
+        ]
+        for url in icon_urls:
+            self.add_icon(self.icons_layout, url)
 
-        # Show IP Button
+        self.icons_container = QWidget(self)
+        self.icons_container.setLayout(self.icons_layout)
+        self.layout.addWidget(self.icons_container)
+
         self.toggle_ip_button = QPushButton("show my ip", self)
         self.toggle_ip_button.clicked.connect(self.fetch_user_ip)
         self.layout.addWidget(self.toggle_ip_button)
 
-        # User IP Label
         self.user_ip_label = QLabel("(-(-_(-_-)_-)-)", self)
         self.user_ip_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.user_ip_label)
 
-        # IP Input and Convert Button
         self.ip_input = QLineEdit(self)
         self.ip_input.setPlaceholderText("Enter an ipv4 or ipv6 to geo locate")
         self.convert_button = QPushButton("convert ip address", self)
@@ -101,29 +105,24 @@ class SpotMeWorkerApp(QMainWindow):
         self.layout.addWidget(self.ip_input)
         self.layout.addWidget(self.convert_button)
 
-        # Lat/Long Label
         self.lat_long_label = QLabel("", self)
         self.layout.addWidget(self.lat_long_label)
 
-        # Additional Info Label
         self.additional_info_label = QLabel(
-            'The&nbsp;<a href="https://spotme.jessejesse.workers.dev">SpotmeWorker</a>&nbsp;captures the ip, device info, and timestamp from every visitor. A status 200 /ok is operational',
+            'The&nbsp;<a href="https://spotme.jessejesse.workers.dev">SpotmeWorker</a>&nbsp;captures the ip, device info, and timestamp from every visitor.',
             self
         )
         self.additional_info_label.setOpenExternalLinks(True)
         self.layout.addWidget(self.additional_info_label)
 
-        # IP List
         self.ip_list = QListWidget(self)
         self.layout.addWidget(self.ip_list)
 
-        # Placeholder Label
         self.placeholder_label = QLabel("additional worker URLs", self)
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.placeholder_label.setStyleSheet("color: #888;")  # Light gray color for placeholder text
+        self.placeholder_label.setStyleSheet("color: #888;")
         self.layout.addWidget(self.placeholder_label)
 
-        # Refresh and Share Buttons
         self.button_layout = QHBoxLayout()
         self.refresh_button = QPushButton("call worker", self)
         self.refresh_button.setObjectName("refresh_button")
@@ -137,13 +136,11 @@ class SpotMeWorkerApp(QMainWindow):
         self.button_layout.addWidget(self.share_button_two)
         self.layout.addLayout(self.button_layout)
 
-        # Link to SpotMe Website
         self.link_label = QLabel('<a href="https://spotme.jessejesse.com" style="color: #FFA500; text-decoration: none;">spotme website</a>', self)
         self.link_label.setOpenExternalLinks(True)
         self.layout.addWidget(self.link_label)
         self.link_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-        # Timer for Date/Time
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_date_time)
         self.timer.start(1000)
@@ -216,21 +213,49 @@ class SpotMeWorkerApp(QMainWindow):
                     ip_response.raise_for_status()
                     ip_data = ip_response.json()
                     self.ip_list.addItem(str(ip_data.get("result", "")))
+                    
         except requests.RequestException as e:
             self.ip_list.clear()
             self.ip_list.addItem("Failed to fetch IP addresses")
             self.placeholder_label.setVisible(True)
+                    
+        except requests.RequestException as e:
+            self.ip_list.addItem(f"Failed to fetch IPs: {e}")
+        except Exception as e:
+            self.ip_list.addItem(f"An error occurred: {e}")
 
     def open_link_one(self):
-        webbrowser.open("https://bit.ly/cfworker")
+        webbrowser.open("https://bit.ly/3pZlJxJ")
 
     def open_link_two(self):
-        webbrowser.open("https://tinyurl.com/spotmewrkr")
+        webbrowser.open("https://tinyurl.com/4a69abm6")
+
+    def add_icon(self, layout, url):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            svg_data = response.content
+            
+            renderer = QSvgRenderer(QByteArray(svg_data))
+            pixmap = QPixmap(64, 64)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+            
+            label = QLabel()
+            label.setPixmap(pixmap)
+            layout.addWidget(label)
+        except requests.RequestException as e:
+            label = QLabel("Error loading icon")
+            layout.addWidget(label)
+            print(f"Error fetching icon: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_win = SpotMeWorkerApp()
-    main_win.show()
+    window = SpotMeWorkerApp()
+    window.show()
     sys.exit(app.exec())
 
 
