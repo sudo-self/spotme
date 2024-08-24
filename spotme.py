@@ -11,10 +11,10 @@ class SpotMeWorkerApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("SpotMe Worker")
+        self.setWindowTitle("python spotme.py")
         self.setGeometry(100, 100, 800, 600)
 
-        
+        # Styling for the application
         self.setStyleSheet("""
             QWidget {
                 background-color: #2E2E2E;
@@ -62,7 +62,7 @@ class SpotMeWorkerApp(QMainWindow):
             }
         """)
 
-        # Main container
+        # Main container setup
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -73,7 +73,7 @@ class SpotMeWorkerApp(QMainWindow):
         self.update_date_time()
 
         # Title
-        self.title_label = QLabel("<h1>SpotMe Worker</h1>", self)
+        self.title_label = QLabel("<h1>python spotme.py</h1>", self)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.title_label)
 
@@ -84,7 +84,7 @@ class SpotMeWorkerApp(QMainWindow):
         self.layout.addWidget(self.worker_image)
 
         # Show IP Button
-        self.toggle_ip_button = QPushButton("Show IP", self)
+        self.toggle_ip_button = QPushButton("show my ip", self)
         self.toggle_ip_button.clicked.connect(self.fetch_user_ip)
         self.layout.addWidget(self.toggle_ip_button)
 
@@ -95,8 +95,8 @@ class SpotMeWorkerApp(QMainWindow):
 
         # IP Input and Convert Button
         self.ip_input = QLineEdit(self)
-        self.ip_input.setPlaceholderText("enter an IP address")
-        self.convert_button = QPushButton("spotme", self)
+        self.ip_input.setPlaceholderText("Enter an ipv4 or ipv6 to geo locate")
+        self.convert_button = QPushButton("convert ip address", self)
         self.convert_button.clicked.connect(self.convert_ip_to_lat_long)
         self.layout.addWidget(self.ip_input)
         self.layout.addWidget(self.convert_button)
@@ -106,23 +106,33 @@ class SpotMeWorkerApp(QMainWindow):
         self.layout.addWidget(self.lat_long_label)
 
         # Additional Info Label
-        self.additional_info_label = QLabel("", self)
+        self.additional_info_label = QLabel(
+            'The&nbsp;<a href="https://spotme.jessejesse.workers.dev">SpotmeWorker</a>&nbsp;captures the ip, device info, and timestamp from every visitor. A status 200 /ok is operational',
+            self
+        )
+        self.additional_info_label.setOpenExternalLinks(True)
         self.layout.addWidget(self.additional_info_label)
 
         # IP List
         self.ip_list = QListWidget(self)
         self.layout.addWidget(self.ip_list)
 
+        # Placeholder Label
+        self.placeholder_label = QLabel("additional worker URLs", self)
+        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.placeholder_label.setStyleSheet("color: #888;")  # Light gray color for placeholder text
+        self.layout.addWidget(self.placeholder_label)
+
         # Refresh and Share Buttons
         self.button_layout = QHBoxLayout()
-        self.refresh_button = QPushButton("><(((('>", self)
+        self.refresh_button = QPushButton("call worker", self)
         self.refresh_button.setObjectName("refresh_button")
         self.refresh_button.clicked.connect(self.fetch_ips)
         self.button_layout.addWidget(self.refresh_button)
-        self.share_button_one = QPushButton("bit.ly/cfworker", self)
+        self.share_button_one = QPushButton("bit.ly", self)
         self.share_button_one.clicked.connect(self.open_link_one)
         self.button_layout.addWidget(self.share_button_one)
-        self.share_button_two = QPushButton("tinyurl.com/spotmewrkr", self)
+        self.share_button_two = QPushButton("tinyURL", self)
         self.share_button_two.clicked.connect(self.open_link_two)
         self.button_layout.addWidget(self.share_button_two)
         self.layout.addLayout(self.button_layout)
@@ -149,13 +159,13 @@ class SpotMeWorkerApp(QMainWindow):
             response.raise_for_status()
             ip_data = response.json()
             self.user_ip_label.setText(f"IP: {ip_data['ip']}")
-        except requests.RequestException:
-            self.user_ip_label.setText("IP")
+        except requests.RequestException as e:
+            self.user_ip_label.setText("Error fetching IP")
 
     def convert_ip_to_lat_long(self):
         ip = self.ip_input.text()
         if not ip:
-            self.lat_long_label.setText("enter an IP address.")
+            self.lat_long_label.setText("did you try calling the worker?")
             return
 
         try:
@@ -166,15 +176,17 @@ class SpotMeWorkerApp(QMainWindow):
             if loc:
                 latitude, longitude = loc.split(",")
                 self.lat_long_label.setText(f"Latitude: {latitude}, Longitude: {longitude}")
-                additional_info = (f"City: {data.get('city', '')}<br>"
-                                   f"Region: {data.get('region', '')}<br>"
-                                   f"Country: {data.get('country', '')}<br>"
-                                   f"Timezone: {data.get('timezone', '')}")
+                additional_info = (
+                    f"City: {data.get('city', '')}<br>"
+                    f"Region: {data.get('region', '')}<br>"
+                    f"Country: {data.get('country', '')}<br>"
+                    f"Timezone: {data.get('timezone', '')}"
+                )
                 self.additional_info_label.setText(additional_info)
             else:
                 self.lat_long_label.setText("Location not found.")
                 self.additional_info_label.clear()
-        except requests.RequestException:
+        except requests.RequestException as e:
             self.lat_long_label.setText("Failed to fetch data.")
             self.additional_info_label.clear()
 
@@ -190,19 +202,24 @@ class SpotMeWorkerApp(QMainWindow):
             data = response.json()
             keys = data.get("result", [])[1]
             self.ip_list.clear()
-            for key in keys:
-                ip_response = requests.get(
-                    f"https://definite-shrimp-39601.upstash.io/get/{key}",
-                    headers={
-                        "Authorization": "Bearer AZqxAAIjcDExYTk3YTM0MTE2MWY0ODhjODhhNWIyNTVkNGE2MTU4OXAxMA"
-                    },
-                )
-                ip_response.raise_for_status()
-                ip_data = ip_response.json()
-                self.ip_list.addItem(str(ip_data.get("result", "")))
-        except requests.RequestException:
+            if not keys:
+                self.placeholder_label.setVisible(True)
+            else:
+                self.placeholder_label.setVisible(False)
+                for key in keys:
+                    ip_response = requests.get(
+                        f"https://definite-shrimp-39601.upstash.io/get/{key}",
+                        headers={
+                            "Authorization": "Bearer AZqxAAIjcDExYTk3YTM0MTE2MWY0ODhjODhhNWIyNTVkNGE2MTU4OXAxMA"
+                        },
+                    )
+                    ip_response.raise_for_status()
+                    ip_data = ip_response.json()
+                    self.ip_list.addItem(str(ip_data.get("result", "")))
+        except requests.RequestException as e:
             self.ip_list.clear()
             self.ip_list.addItem("Failed to fetch IP addresses")
+            self.placeholder_label.setVisible(True)
 
     def open_link_one(self):
         webbrowser.open("https://bit.ly/cfworker")
@@ -215,3 +232,5 @@ if __name__ == "__main__":
     main_win = SpotMeWorkerApp()
     main_win.show()
     sys.exit(app.exec())
+
+
