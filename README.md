@@ -1,4 +1,4 @@
-# Educational use production code would not contain api keys
+# Educational not meant for production
 ## <a href="https://spotme.jessejesse.com">spotme tool</a><br>
 ## <a href="https://spotme.jessejesse.workers.dev">ip worker</a>
 ## <code>python GUI</code>
